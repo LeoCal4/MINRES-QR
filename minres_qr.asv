@@ -61,6 +61,7 @@ function [x, residuals, setup_time, lanczos_times, qr_times, ...
         if residual <= threshold
             break
         end
+        %norm(T(1:k+1, 1:k) * y_k - beta_1 * e_1)
     end
     fprintf("Completed in %g iterations\n", k)
 end

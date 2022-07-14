@@ -12,10 +12,11 @@ function [Q_k, R_k, mat_mul1_times, mat_mul2_times] = ...
         %   can simplify since we already calculate the first k-1 rows and cols
         %   we can add the last row and cols to previous_R (R_k obtained from
         %   the previous iteration)
+        % =======================
         previous_Q = [previous_Q; zeros(1, k)];
-        tic
+        %tic
             new_col = previous_Q' * T_k(1:end, end); % O(n^2)
-        mat_mul1_times(k) = toc;
+        %mat_mul1_times(k) = toc;
         Z = zeros(1, k-1);
         % new T_k
         T_k = [previous_R new_col; Z T_k(end, end)];
@@ -50,8 +51,9 @@ function [Q_k, R_k, mat_mul1_times, mat_mul2_times] = ...
     %Q_k = previous_Q * H_k; 
     % Optimization:
     %   can simplfy by updating previous_Q and adding the last rows and cols
+    % =====================
     Q_k = previous_Q;
-    tic
+    %tic
         if optimize == false
             Q_k(1:end, end-1:end) = Q_k * H_k(1:end, end-1:end); % O(2n^2) 
         else
@@ -59,8 +61,7 @@ function [Q_k, R_k, mat_mul1_times, mat_mul2_times] = ...
             Q_k(1:k, k) = Q_k_col * H_k(k, k); % O(n)
             Q_k(1:k, k+1) = Q_k_col * H_k(k, k+1); % O(n)
             Q_k(k+1, k:k+1) = H_k(k+1, k:k+1);
-            %Q_k(k+1, k+1) = H_k(k+1, k+1);
         end
-    mat_mul2_times(k) = toc;
+    %mat_mul2_times(k) = toc;
 end
 

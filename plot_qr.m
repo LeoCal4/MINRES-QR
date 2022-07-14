@@ -9,8 +9,9 @@ mat_mul2_tot_new_times = zeros(problem_size, 1);
 mat_mul2_tot_old_times = zeros(problem_size, 1);
 
 for run_index = 1:num_runs
-    [x_new, res_new, setup_time, lanczos_times, qr_times_new, inv_times, final_times, mat_mul1_times, mat_mul2_times_new] = minres_qr(A, b, true);
-    [x_old, res_old, setup_time, lanczos_times, qr_times_old, inv_times, final_times, mat_mul1_times, mat_mul2_times_old] = minres_qr(A, b, false);
+    fprintf("Run number %g\n", run_index);
+    [x_new, res_new, setup_time, lanczos_times, qr_times_new, inv_times_opt, final_times, mat_mul1_times, mat_mul2_times_new] = minres_qr(A, b, true);
+    [x_old, res_old, setup_time, lanczos_times, qr_times_old, inv_times_old, final_times, mat_mul1_times, mat_mul2_times_old] = minres_qr(A, b, false);
     qr_tot_new_times = qr_tot_new_times + qr_times_new;
     qr_tot_old_times = qr_tot_old_times + qr_times_old;
     mat_mul2_tot_new_times = mat_mul2_tot_new_times + mat_mul2_times_new;
@@ -28,23 +29,41 @@ size(mat_mul2_tot_new_times)
 x_diff = norm(x_new - x_old);
 fprintf("The difference between the solutions is %d\n", x_diff);
 
-subplot(3, 1, 1);
+subplot(3, 2, 1);
 plot(t, mat_mul2_tot_new_times, t, qr_tot_new_times);
 legend("mul2", "total");
 title("new");
 
-subplot(3, 1, 2);
+subplot(3, 2, 2);
 plot(t, mat_mul2_tot_old_times, t, qr_tot_old_times);
 %plot(t, log(mat_mul2_times_old), t, log(qr_times_old));
 legend("mul2", "total");
 title("old");
 
-subplot(3, 1, 3);
+subplot(3, 2, 3);
+plot(t, qr_tot_old_times, t, qr_tot_new_times);
+%plot(t, log(mat_mul2_times_old), t, log(qr_times_old));
+legend("old", "new");
+title("qr comparison");
+
+subplot(3, 2, 4);
+plot(t, mat_mul2_tot_old_times, t, mat_mul2_tot_new_times);
+%plot(t, log(mat_mul2_times_old), t, log(qr_times_old));
+legend("old", "new");
+title("mul comparison");
+
+subplot(3, 2, 5);
 mat_mul_diff = mat_mul2_tot_new_times - mat_mul2_tot_old_times;
 plot(t, mat_mul_diff);
 %plot(t, log(mat_mul2_times_old), t, log(qr_times_old));
 %legend("mul2");
 title("diff");
+
+subplot(3, 2, 6);
+plot(t, inv_times_old, t, inv_times_opt);
+%plot(t, log(mat_mul2_times_old), t, log(qr_times_old));
+legend("old", "new");
+title("inv comparison");
 
 old_qr_mean = mean(qr_tot_old_times);
 new_qr_mean = mean(qr_tot_new_times);
