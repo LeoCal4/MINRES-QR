@@ -3,6 +3,10 @@ function [x, residuals, setup_time, lanczos_times, qr_times, ...
     if exist('optimize', 'var') == 0
        optimize = true;
     end
+    if ~is_symm(A)
+        disp('A DEVE ESSERE SIMMETRICA OOOOOOOO')
+        return
+    end
     % [culo, culo, setup_time, lanczos_times, qr_times, inv_times, final_times, , mat_mul1_times, mat_mul2_times]
     %tic
         size_A = size(A, 1);

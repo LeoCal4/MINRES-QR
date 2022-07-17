@@ -2,10 +2,7 @@ function [V, T, w_prime] = iterative_lanczos(A, V, T, w_prev, b, k)
 %A must be symmetric.
 %Assuming V, T have been already created according to the algorithms
 %specifications. At step k = 1, both V and T are zero-matrices.
-    if ~is_symm(A)
-        disp('A DEVE ESSERE SIMMETRICA OOOOOOOO')
-        return
-    end
+    %TODO add lucky breakdown check => x = 0
     if k == 1
         % How to pass b? We only need it at the first iteration
         v_1 = b/norm(b);

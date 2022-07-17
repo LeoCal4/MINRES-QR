@@ -50,7 +50,9 @@ function [Q_k, R_k, mat_mul1_times, mat_mul2_times] = ...
     % ==== OLD VERSION ====
     %Q_k = previous_Q * H_k; 
     % Optimization:
-    %   can simplfy by updating previous_Q and adding the last rows and cols
+    %   can simplfy by updating previous_Q and adding the last rows and
+    %   cols. We multiply only the elements which are actually included in
+    %   the whole matrix multiplication.
     % =====================
     Q_k = previous_Q;
     %tic
