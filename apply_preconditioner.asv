@@ -1,12 +1,6 @@
 function [prec_A, prec_b] = apply_preconditioner(A, b, optimize, sparse, threshold)
-    if exist('optimize', 'var') == 0
-       optimize = true;
-    end
     if exist('sparse', 'var') == 0
        sparse = false;
-    end
-    if exist('threshold', 'var') == 0
-       threshold = 0;
     end
     size_A = size(A, 1);
     if mod(size_A, 2) ~= 0
@@ -25,17 +19,16 @@ function [prec_A, prec_b] = apply_preconditioner(A, b, optimize, sparse, thresho
         S(S < threshold & S > -threshold) = 0;
     end
     P = [D Z; Z S];
-    %eig(P\A)
-    % using decomposition() function is faster than precomputing the inverse 
-    % as the decomposition does not explicitely build L and D (probably)
+    %eig(inv(P)*A)
+    %[L, ] = ldl(P);
+    L = decomposition(P, "ldl");
+    % precomputing the inverse is faster than reinverting at each operation
     if optimize == false
-        [L, ] = ldl(P);
+        prec_A = L \ A / L';
+        prec_b = L \ b;
+    else
         inv_L = inv(L);
         prec_A = inv_L * A * inv_L';
         prec_b = inv_L * b;
-    else
-        L = decomposition(P, "ldl");
-        prec_A = L \ A / L';
-        prec_b = L \ b;
     end
 end
