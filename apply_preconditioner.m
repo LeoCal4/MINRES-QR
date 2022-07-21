@@ -28,14 +28,14 @@ function [prec_A, prec_b] = apply_preconditioner(A, b, optimize, sparse, thresho
     %eig(P\A)
     % using decomposition() function is faster than precomputing the inverse 
     % as the decomposition does not explicitely build L and D (probably)
+    [L, ] = ldl(P);
     if optimize == false
-        [L, ] = ldl(P);
         inv_L = inv(L);
         prec_A = inv_L * A * inv_L';
         prec_b = inv_L * b;
     else
-        L = decomposition(P, "ldl");
-        prec_A = L \ A / L';
-        prec_b = L \ b;
+        dL = decomposition(L);
+        prec_A = dL \ A / dL';
+        prec_b = dL \ b;
     end
 end

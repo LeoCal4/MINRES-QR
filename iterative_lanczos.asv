@@ -1,11 +1,8 @@
-function [V, T, w_prime] = iterative_lanczos(A, V, T, w_prev, b, k, reorthogonalize)
+function [V, T, w_prime] = iterative_lanczos(A, V, T, w_prev, b, k)
 %A must be symmetric.
 %Assuming V, T have been already created according to the algorithms
 %specifications. At step k = 1, both V and T are zero-matrices.
     %TODO add lucky breakdown check => x = 0
-    if exist('reorthogonalize', 'var') == 0
-       reorthogonalize = false;
-    end
     if k == 1
         % How to pass b? We only need it at the first iteration
         v_1 = b/norm(b);
@@ -34,7 +31,7 @@ function [V, T, w_prime] = iterative_lanczos(A, V, T, w_prev, b, k, reorthogonal
         T(k, k) = alpha_k; % O(n)
         w_prime = w - alpha_k*v_k; % O(n)
         if reorthogonalize
-           w_prime = w_prime - V(:, 1:k) * (V(:, 1:k)' * w_prime);
+           w_prime = w_prime - V * (V * w_prime);
         end
         
         T(k+1, k) = norm(w_prime); % O(n)
