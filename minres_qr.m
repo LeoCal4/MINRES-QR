@@ -3,6 +3,9 @@ function [x, residuals, setup_time, lanczos_times, qr_times, ...
     if exist('optimize', 'var') == 0
        optimize = true;
     end
+    if exist('reorthogonalize', 'var') == 0
+       reorthogonalize = false;
+    end
     if ~is_symm(A)
         disp('A DEVE ESSERE SIMMETRICA OOOOOOOO')
         return
