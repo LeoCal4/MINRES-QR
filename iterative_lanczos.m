@@ -8,8 +8,8 @@ function [V, T, w_prime] = iterative_lanczos(A, V, T, w_prev, b, k, reorthogonal
     end
     if k == 1
         % How to pass b? We only need it at the first iteration
-        v_1 = b/norm(b);
-        V(:, 1) = v_1; % O(n)
+        v_1 = b/norm(b); % O(n)
+        V(:, 1) = v_1;
         w = A*v_1; % O(n^2)
         % alpha_1
         alpha_1 = v_1'*w;
