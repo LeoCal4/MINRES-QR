@@ -1,5 +1,4 @@
-function [Q_k, R_k, mat_mul1_times, mat_mul2_times] = ...
-    iterative_QR(T_k, previous_Q, previous_R, k, mat_mul1_times, mat_mul2_times, optimize)
+function [Q_k, R_k] = iterative_QR(T_k, previous_Q, previous_R, k)
     % in any iteration > 1, the previous_Q is expanded for dimensional 
     %    consistency, and T_k is updated accordingly
     if k ~= 1
@@ -14,16 +13,15 @@ function [Q_k, R_k, mat_mul1_times, mat_mul2_times] = ...
         %   the previous iteration)
         % =======================
         previous_Q = [previous_Q; zeros(1, k)];
-        %tic
-            new_col = previous_Q' * T_k(1:end, end); % O(n^2)
-        %mat_mul1_times(k) = toc;
+        new_col = previous_Q' * T_k(1:end, end); % O(n^2)
         Z = zeros(1, k-1);
         % new T_k
         T_k = [previous_R new_col; Z T_k(end, end)];
         previous_Q = [previous_Q zeros(k+1, 1)];
         previous_Q(end, end) = 1;
     end
-    % calculate the current householder vector
+    % calculate the current householder vector using only the last 2 elements
+    %   of T_k k-th column
     [u_k, ] = householder_vector(T_k(k:end, k)); % O(1)
     % obtain the submatrix which will compose H_k
     H_k_prime = eye(2) - 2 * (u_k * u_k'); % O(1)
@@ -55,15 +53,9 @@ function [Q_k, R_k, mat_mul1_times, mat_mul2_times] = ...
     %   the whole matrix multiplication.
     % =====================
     Q_k = previous_Q;
-    %tic
-        if optimize == false
-            Q_k(1:end, end-1:end) = Q_k * H_k(1:end, end-1:end); % O(2n^2) 
-        else
-            Q_k_col = Q_k(1:k, k); % saving the column to avoid overwriting it
-            Q_k(1:k, k) = Q_k_col * H_k(k, k); % O(n)
-            Q_k(1:k, k+1) = Q_k_col * H_k(k, k+1); % O(n)
-            Q_k(k+1, k:k+1) = H_k(k+1, k:k+1);
-        end
-    %mat_mul2_times(k) = toc;
+    Q_k_col = Q_k(1:k, k); % saving the column to avoid overwriting it
+    Q_k(1:k, k) = Q_k_col * H_k(k, k); % O(n)
+    Q_k(1:k, k+1) = Q_k_col * H_k(k, k+1); % O(n)
+    Q_k(k+1, k:k+1) = H_k(k+1, k:k+1);
 end
 

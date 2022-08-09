@@ -1,41 +1,21 @@
-function [prec_A, prec_b] = apply_preconditioner(A, b, optimize, sparse, threshold)
-    if exist('optimize', 'var') == 0
-       optimize = true;
-    end
+function [D, C, S] = apply_preconditioner(A, size_D, sparse, threshold)
+%function S = apply_preconditioner(A, size_D, sparse, threshold)
     if exist('sparse', 'var') == 0
        sparse = false;
     end
     if exist('threshold', 'var') == 0
        threshold = 0;
     end
-    size_A = size(A, 1);
-    if mod(size_A, 2) ~= 0
-        disp("Matrix size is not even")
-        return 
-    end
-    D = A(1:size_A/2, 1:size_A/2);
-    E = A((size_A/2)+1:end, 1:size_A/2);
-    Z = zeros(size_A/2);
-    if optimize == false
-        S = -E * inv(D) * E';
-    else
-        S = -E * (D \ E');
-    end
+    D = A(1:size_D, 1:size_D);
+    E = A(size_D+1:end, 1:size_D);
+    %fprintf("density(E): %2.5f\n", (nnz(E)*100)/(size(E, 1)*size(E, 2)));
+    S = -E * (D \ E'); % a possible sparse approximation to do is to have nnz only where E has them
+    %fprintf("density(S): %2.5f\n", (nnz(S)*100)/(size(S, 1)*size(S, 2)));
     if sparse == true
-        S(S < threshold & S > -threshold) = 0;
+        E_mask = E(:, 1:size(E, 1)) ~= 0;
+        S = S .* E_mask;
+        %fprintf("post mask density(S): %2.5f\n", (nnz(S)/(size(S, 1)*size(S, 2)))*100);
+        %S(S < threshold & S > -threshold) = 0;
     end
-    P = [D Z; Z S];
-    %eig(P\A)
-    % using decomposition() function is faster than precomputing the inverse 
-    % as the decomposition does not explicitely build L and D (probably)
-    [L, ] = ldl(P);
-    if optimize == false
-        inv_L = inv(L);
-        prec_A = inv_L * A * inv_L';
-        prec_b = inv_L * b;
-    else
-        dL = decomposition(L);
-        prec_A = dL \ A / dL';
-        prec_b = dL \ b;
-    end
+    C = chol(-S);
 end
