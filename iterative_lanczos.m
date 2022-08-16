@@ -1,7 +1,7 @@
 function [V, T, w_prime] = iterative_lanczos(A, V, T, w_prev, b, k, reorthogonalize, precon, D, C)
-%A must be symmetric.
-%Assuming V, T have been already created according to the algorithms
-%specifications. At step k = 1, both V and T are zero-matrices.
+% A must be symmetric.
+% Assuming V, T have been already created according to the algorithms
+%   specifications. At step k = 1, both V and T are zero-matrices.
     %TODO add lucky breakdown check => x = 0
     if exist('reorthogonalize', 'var') == 0
        reorthogonalize = false;
@@ -10,14 +10,11 @@ function [V, T, w_prime] = iterative_lanczos(A, V, T, w_prev, b, k, reorthogonal
        precon = false;
     end
     if k == 1
-        % How to pass b? We only need it at the first iteration
         v_1 = b/norm(b); % O(n)
         V(:, 1) = v_1;
         w = A*v_1; % O(n^2)
         if precon ~= false
-           w_1 = D \ w(1:size(D,1), 1);
-           w_2 = - C \ (C' \ w(size(D, 1)+1:end, 1));
-           w = [w_1; w_2];
+           w = multiply_preconditioner(w, D, C);
         end
         % alpha_1
         alpha_1 = v_1'*w;
@@ -33,9 +30,7 @@ function [V, T, w_prime] = iterative_lanczos(A, V, T, w_prev, b, k, reorthogonal
         % w_k
         w = A*v_k;
         if precon ~= false
-           w_1 = D \ w(1:size(D,1), 1);
-           w_2 = - C' \ (C \ w(size(D, 1)+1:end, 1));
-           w = [w_1; w_2];
+           w = multiply_preconditioner(w, D, C);
         end
         w = w - beta_k*V(:, k-1); % O(n^2 + n)
         % alpha_k

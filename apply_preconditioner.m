@@ -1,4 +1,4 @@
-function [D, C, S] = apply_preconditioner(A, size_D, sparse, threshold)
+function [D, C, S, P] = apply_preconditioner(A, size_D, sparse, threshold)
 %function S = apply_preconditioner(A, size_D, sparse, threshold)
     if exist('sparse', 'var') == 0
        sparse = false;
@@ -18,4 +18,6 @@ function [D, C, S] = apply_preconditioner(A, size_D, sparse, threshold)
         %S(S < threshold & S > -threshold) = 0;
     end
     C = chol(-S);
+    Z = zeros(size(C, 1), size_D);
+    P = [D Z'; Z S];
 end

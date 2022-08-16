@@ -1,4 +1,4 @@
-function [x, residuals] = minres_qr(A, b, reorthogonalize, precon, size_D)
+function [x, residuals, residuals_precon] = minres_qr(A, b, reorthogonalize, precon, size_D)
     if exist('reorthogonalize', 'var') == 0
        reorthogonalize = false;
     end
@@ -8,6 +8,17 @@ function [x, residuals] = minres_qr(A, b, reorthogonalize, precon, size_D)
     if ~is_symm(A)
         disp('A DEVE ESSERE SIMMETRICA OOOOOOOO')
         return
+    end
+    b_start = b;
+    % preconditioning 
+    D = 0;
+    C = 0;
+    if precon == true
+       A = A(1:end-1, 1:end-1);
+       b = b(1:end-1, :);
+       [D, C] = apply_preconditioner(A, size_D);
+       %b = multiply_preconditioner(b, D, C);
+       residuals_precon = nan(1, size(A, 1));
     end
     size_A = size(A, 1);
     threshold = 1e-9;
@@ -21,15 +32,6 @@ function [x, residuals] = minres_qr(A, b, reorthogonalize, precon, size_D)
     Q = eye(1);
     R = eye(1);
     c = zeros(1, 1);
-    % preconditing 
-    D = 0;
-    C = 0;
-    if precon ~= false
-       [D, C] = apply_preconditioner(A, size_D);
-       b_1 = D \ b(1:size_D, :); % D
-       b_2 = - C' \ (C \ b(size_D+1:end, :)); % S = -CC'
-       b = [b_1; b_2];
-    end
     % compute algorithm iteration up to size of A
     for k = 1:size_A
         [V, T, prev_w] = iterative_lanczos(A, V, T, prev_w, b, k, reorthogonalize, precon, D, C);
@@ -41,13 +43,15 @@ function [x, residuals] = minres_qr(A, b, reorthogonalize, precon, size_D)
         x = V(:, 1:k) * y_k;
         y = A*x;
         if precon ~= false
-           y_1 = D \ y(1:size_D, 1);
-           y_2 = - C' \ (C \ y(size_D+1:end, 1));
-           y = [y_1; y_2];
+           y_p = multiply_preconditioner(y, D, C);
+           residuals_precon(k) = norm(b - y_p);
+           y(end+1) = 0;
+           x(end+1) = 0;
         end
-        residual = norm(b - y);
+        residual = norm(b_start - y);
         residuals(k) = residual;
         if residual <= threshold
+            residuals = residuals(1:k);
             break
         end
     end

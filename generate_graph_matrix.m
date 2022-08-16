@@ -2,6 +2,8 @@ function [A, E, G] = generate_graph_matrix(nodes, edges_parameter, polytree)
     if exist('polytree', 'var') == 0
        polytree = false;
     end
+    %if polytree == true
+    %   edges = nodes - 1; 
     % if bigger than 1 they are edges
     if edges_parameter > 1
         edges = edges_parameter;
