@@ -19,6 +19,7 @@ function [Q_k, R_k] = iterative_QR(T_k, previous_Q, previous_R, k)
         T_k = [previous_R new_col; Z T_k(end, end)];
         previous_Q = [previous_Q zeros(k+1, 1)];
         previous_Q(end, end) = 1;
+        %fprintf("prev_Q orthogonality: %f\n", norm(previous_Q'*previous_Q));
     end
     % calculate the current householder vector using only the last 2 elements
     %   of T_k k-th column

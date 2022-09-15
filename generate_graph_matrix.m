@@ -1,4 +1,4 @@
-function [A, E, G] = generate_graph_matrix(nodes, edges_parameter, polytree)
+function [A, E, D, G] = generate_graph_matrix(nodes, edges_parameter, polytree)
     if exist('polytree', 'var') == 0
        polytree = false;
     end
@@ -31,7 +31,6 @@ function [A, E, G] = generate_graph_matrix(nodes, edges_parameter, polytree)
     E = sparse(nodes, edges);
     adj_matrix = zeros(nodes);
     % TODO add check to not add an edge which is already present
-    % TODO add sparse construction of E
     for col = 1:edges
         % ensure that each node has at least 1 (outgoing) edge
         if col < nodes + 1
