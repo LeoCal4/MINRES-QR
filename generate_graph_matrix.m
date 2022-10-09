@@ -1,4 +1,7 @@
-function [A, E, D, G] = generate_graph_matrix(nodes, edges_parameter, polytree)
+function [A, b, E, D, G, A_t, b_t, E_t] = generate_graph_matrix(nodes, edges_parameter, min_max_D, polytree)
+    if exist('min_max_D', 'var') == 0
+       min_max_D = [0, 1];
+    end
     if exist('polytree', 'var') == 0
        polytree = false;
     end
@@ -26,7 +29,8 @@ function [A, E, D, G] = generate_graph_matrix(nodes, edges_parameter, polytree)
     end
     fprintf("Generating graph with %u nodes and %.0f edges (density = %1.2f, edge/nodes = %1.2f)\n", nodes, edges, density, edges/nodes);
     fprintf("Final matrix size: %.0f x %.0f\n", nodes+edges, nodes+edges);
-    d = rand(edges, 1);
+    fprintf("Values of D generated in range [%.0f, %.0f]\n",min_max_D(1), min_max_D(2));    
+    d = min_max_D(1) + (min_max_D(2)-min_max_D(1))*rand(edges, 1);
     D = diag(d);
     E = sparse(nodes, edges);
     adj_matrix = zeros(nodes);
@@ -72,4 +76,10 @@ function [A, E, D, G] = generate_graph_matrix(nodes, edges_parameter, polytree)
     A = [D E'; E Z];
     A = full(A);
     G = digraph(adj_matrix);
+    b = rand(nodes+edges, 1);
+    half_c = b(edges+1:edges+nodes/2);
+    b(edges+1+nodes/2:end) = -half_c;
+    A_t = A(1:end-1, 1:end-1);
+    b_t = b(1:end-1);
+    E_t = E(1:end-1, :);
 end
