@@ -1,10 +1,14 @@
-function [A, b, E, D, G, A_t, b_t, E_t] = generate_graph_matrix(nodes, edges_parameter, min_max_D, polytree)
+function [A, b, E, D, G, A_t, b_t, E_t] = generate_graph_matrix(nodes, edges_parameter, seed, min_max_D, polytree)
+    if exist('seed', 'var') == 0
+       seed = 0;
+    end
     if exist('min_max_D', 'var') == 0
-       min_max_D = [0, 1];
+       min_max_D = [1, 2];
     end
     if exist('polytree', 'var') == 0
        polytree = false;
     end
+    rng(seed);
     %if polytree == true
     %   edges = nodes - 1; 
     % if bigger than 1 they are edges
@@ -31,7 +35,8 @@ function [A, b, E, D, G, A_t, b_t, E_t] = generate_graph_matrix(nodes, edges_par
     fprintf("Final matrix size: %.0f x %.0f\n", nodes+edges, nodes+edges);
     fprintf("Values of D generated in range [%.0f, %.0f]\n",min_max_D(1), min_max_D(2));    
     d = min_max_D(1) + (min_max_D(2)-min_max_D(1))*rand(edges, 1);
-    D = diag(d);
+%     D = sparse(diag(d));
+    D = sparse([1:1:edges], [1:1:edges], d);
     E = sparse(nodes, edges);
     adj_matrix = zeros(nodes);
     % TODO add check to not add an edge which is already present
@@ -74,7 +79,7 @@ function [A, b, E, D, G, A_t, b_t, E_t] = generate_graph_matrix(nodes, edges_par
     E = E(:, random_E_cols_perm);
     Z = zeros(nodes, nodes);
     A = [D E'; E Z];
-    A = full(A);
+%     A = full(A);
     G = digraph(adj_matrix);
     b = rand(nodes+edges, 1);
     half_c = b(edges+1:edges+nodes/2);

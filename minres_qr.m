@@ -30,14 +30,14 @@ function [x, residuals, iter, residuals_precon] = minres_qr(A, b, reorthogonaliz
     residuals = nan(1, size_A);
     
     % initialize Lanczos' matrices
-    V = zeros(size_A, size_A+1);
-    T = zeros(size_A+1, size_A);
+    V = zeros(size_A, size_A+1); % not sparse
+    T = zeros(size_A+1, size_A); % sparse - prob not worth since most of the operations are just access and no mults
     prev_w = b;
     beta_1 = norm(b);
     
     % initialize QR matrices
-    Q = eye(1);
-    R = eye(1);
+    Q = eye(1); % not sparse
+    R = eye(1); % sparse - needs to be assigned to create T_k in QR, so not worth to make it sparse
     c = zeros(1, 1);
     
     % iterate up to size of A at max
@@ -80,6 +80,7 @@ function [x, residuals, iter, residuals_precon] = minres_qr(A, b, reorthogonaliz
             break
         end
     end
+    
     x = x_k;
     residuals = residuals(1:k);
     fprintf("Completed in %g iterations\n", k)
