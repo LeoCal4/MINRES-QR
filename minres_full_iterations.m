@@ -1,8 +1,8 @@
-n_nodes = 100;
-% edges_per_node_values = [4, 8, 16];
-edges_per_node_values = [2, 3];
+n_nodes = 512;
+edges_per_node_values = [8, 16];
+% edges_per_node_values = [2, 3];
 tol = 1e-09;
-num_of_reps = 3;
+num_of_reps = 1;
 
 for edges_per_node_index = 1:size(edges_per_node_values, 2)
     edges_per_node = edges_per_node_values(edges_per_node_index);
@@ -22,13 +22,7 @@ for edges_per_node_index = 1:size(edges_per_node_values, 2)
         [x, res, iter] = minres_qr(A_t, b_t);
         times(1, i) = toc;
         iterations(1, i) = iter;
-        residuals(i, 1:size(res, 2)) = log(res);
-        % save images
-        image_title = sprintf("minres_qr_%i_nodes_%i_edges_rep_%i", n_nodes, n_edges, i);
-        plot(residuals(i, 1:size(res, 2)));
-        fig = gcf;
-        saveas(fig, strcat(image_title, ".png"));
-        saveas(fig, strcat(image_title, ".pdf"));
+        residuals(i, 1:size(res, 2)) = res;
     end
     % write iterations
     writematrix(iterations, strcat(base_title, "_iterations.txt"));
