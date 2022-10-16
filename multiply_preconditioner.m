@@ -10,3 +10,7 @@ function [b] = multiply_preconditioner(a, D, C, transpose_C)
     b_2 = C \ a(size_D+1:end, :); % Sx = a => = -CC'x = a => x = -C'\C\a
     b = [b_1; b_2];
 end
+
+function [x] = diag_inverter(D, b)
+    x = 1./diag(D) .* b;
+end

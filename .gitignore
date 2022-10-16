@@ -2,3 +2,6 @@
 *test*
 *.txt
 *experiments*
+matrices/
+plots/
+minres_qr_results/

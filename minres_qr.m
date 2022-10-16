@@ -1,4 +1,4 @@
-function [x, residuals, iter, residuals_precon] = minres_qr(A, b, reorthogonalize, precon, size_D)
+function [x, residuals, iter, residuals_precon] = minres_qr(A, b, precon, size_D, precon_threshold, precon_perc_threshold, reorthogonalize)
     % initialize optional variables
     if exist('reorthogonalize', 'var') == 0
        reorthogonalize = false;
@@ -6,20 +6,34 @@ function [x, residuals, iter, residuals_precon] = minres_qr(A, b, reorthogonaliz
     if exist('precon', 'var') == 0
        precon = false;
     end
-    % check whether A is symmetric
-    if ~is_symm(A)
-        error('A must be symmetric')
-        return
+    if exist('precon_threshold', 'var') == 0
+        precon_sparse = false;
+        precon_threshold = 0;
+    else
+        precon_sparse = true;
     end
+    if exist('precon_perc_threshold', 'var') == 0
+       precon_perc_threshold = 0;
+    end
+    % check whether A is symmetric
+%     if ~is_symm(A)
+%         error('A must be symmetric')
+%         return
+%     end
     % saving the original b, before eventual preconditioning
     b_start = b;
     % preconditioning 
     D_s = 0;
     C = 0;
     if precon == true
-        [D_s, C] = apply_preconditioner(A, size_D);
+        fprintf("Initializing preconditioner\n");
+        [D_s, C] = apply_preconditioner(A, size_D, precon_sparse, precon_threshold, precon_perc_threshold);
         b = multiply_preconditioner(b, D_s, C, true);
         residuals_precon = nan(1, size(A, 1));
+    end
+    
+    if reorthogonalize == true
+        fprintf("\tApplying reorthogonalization");
     end
     
     % initialized general vars
@@ -28,8 +42,12 @@ function [x, residuals, iter, residuals_precon] = minres_qr(A, b, reorthogonaliz
     residuals = nan(1, size_A);
     
     % initialize Lanczos' matrices
-    V = zeros(size_A, size_A+1);
-    T = zeros(size_A+1, size_A);
+    %   preinitializing them with the correct dimensions make them too big
+    %   for problems with notable sizes (changes in times are minimal)
+%     V = zeros(size_A, size_A+1);
+%     T = zeros(size_A+1, size_A);
+    V = zeros(size_A, 2);
+    T = zeros(2, 1);
     prev_w = b;
     beta_1 = norm(b);
     
@@ -37,6 +55,8 @@ function [x, residuals, iter, residuals_precon] = minres_qr(A, b, reorthogonaliz
     Q = eye(1);
     R = eye(1);
     c = zeros(1, 1);
+    
+    fprintf("Starting iterations\n");
     
     % iterate up to size of A at max
     for k = 1:size_A
@@ -58,11 +78,10 @@ function [x, residuals, iter, residuals_precon] = minres_qr(A, b, reorthogonaliz
             % A*x of the preconditioned system
             y_p = multiply_preconditioner(y_p, D_s, C, true); % y_p = B^-T * A * B^-1 * \hat(x)
             residuals_precon(k) = norm(b - y_p);
-            x_k(end+1) = 0; % solution of the original system
         end
         % A*x of the original system
         y = A * x_k;
-        residual = norm(b_start - y);
+        residual = norm(b_start - y) / norm(b_start);
         residuals(k) = residual;
         % check whether the residual is small enough
         if precon == false && residual <= threshold
