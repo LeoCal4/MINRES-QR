@@ -7,16 +7,16 @@ function [V, T, w_prime] = iterative_lanczos(A, V, T, w_prev, k, reorthogonalize
 %
 % Inputs:
 %
-% - A ([nodes+edges x nodes+edges] real sparse matrix): the main problem matrix.
+% - A ([(nodes-1)+edges x (nodes-1)+edges] real sparse matrix): the main problem matrix.
 %
-% - V ([nodes+edges x k-1] real matrix or scalar): the orthogonal matrix V_{k-1}
+% - V ([(nodes-1)+edges x k-1] real matrix or scalar): the orthogonal matrix V_{k-1}
 %       containing the vectors spanning the Krylov subspace up to dimension k-1.
 %       During the first iteration, this is just 0.
 %
 % - T ([k x k-1] real matrix or scalar): the tridiagonal matrix T_{k-1}
 %       During the first iteration, this is just 0.
 %
-% - w_prev ([n x 1] real vector): the vector w_{k-1} obtained during the previous
+% - w_prev ([(nodes-1)+edges x 1] real vector): the vector w_{k-1} obtained during the previous
 %       iteration. It is needed to create v_k. 
 %       IMPORTANT: During the first iteration, this is the vector b.
 %
@@ -30,17 +30,17 @@ function [V, T, w_prime] = iterative_lanczos(A, V, T, w_prev, k, reorthogonalize
 %
 % - precon (bool, defaults to false): 
 %
-% - D_s ([edges x edgex] real matrix, defaults to 0): the square root of D.
+% - D_s ([edges x edges] real matrix, defaults to 0): the square root of D.
 %
-% - C ([nodes x nodes] real matrix, defaults to 0): the Cholesky factor of -S.
+% - C ([nodes-1 x nodes-1] real matrix, defaults to 0): the Cholesky factor of -S.
 %
 % Outputs:
 %
-% - V ([nodes+edges x k] real matrix or scalar): the updated matrix V_k.
+% - V ([(nodes-1)+edges x k] real matrix or scalar): the updated matrix V_k.
 %
 % - T ([k+1 x k] real matrix or scalar): the updated tridiagonal matrix T_k.
 %
-% - w_prime ([nodes+edges x 1] real vector): the current w'; it becomes the next w_prev.
+% - w_prime ([(nodes-1)+edges x 1] real vector): the current w'; it becomes the next w_prev.
 %
     
     % optional variables check

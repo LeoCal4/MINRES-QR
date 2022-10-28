@@ -2,9 +2,9 @@ function [D_s, C, P] = create_preconditioner(A, n_edges, threshold, build_full_p
 % Creates the Schur Complement preconditioner and its components, 
 %   needed to multiply it efficiently and indirectly, while maintaining symmetry. 
 %   The preconditioner is defined as [D 0; 0 S], where D is the diagonal
-%   positive matrix from the problem matrix A, while S is its Schur
-%   complement with respect to D, defined as S = - E D^-1 E. If E (the
-%   incidence matrix) has full rank (#nodes - 1), the matrix S is negative
+%   positive matrix from the problem matrix A_t, while S is its Schur
+%   complement with respect to D, defined as S = - F D^-1 F. If F (the
+%   truncated incidence matrix) has full rank (#nodes - 1), the matrix S is negative
 %   definite. This needs to be true, as otherwise Cholesky cannot be
 %   applied to -S.
 %   The two blocks composing the matrix are factorized using Cholesky, 
@@ -13,8 +13,8 @@ function [D_s, C, P] = create_preconditioner(A, n_edges, threshold, build_full_p
 %
 % Inputs:
 %
-% - A ([nodes+edges x nodes+edges] real matrix): the main problem matrix, 
-%       composed by [D E'; E 0]
+% - A ([(nodes-1)+edges x (nodes-1)+edges] real matrix): the truncated problem matrix, 
+%       composed by [D F'; F 0]
 % 
 % - n_edges (int, scalar): the number of edges in the problem graph. This
 %       is needed to know how to extract D from A.
