@@ -1,7 +1,7 @@
 *.asv
-*test*
 *.txt
-*experiments*
+*.dat
+*test*
 matrices/
 plots/
 minres_qr_results/

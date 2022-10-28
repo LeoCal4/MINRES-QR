@@ -1,39 +1,107 @@
-function [x, residuals, iter, residuals_precon] = minres_qr(A, b, precon, size_D, precon_threshold, precon_perc_threshold, reorthogonalize)
-    % initialize optional variables
-    if exist('reorthogonalize', 'var') == 0
-       reorthogonalize = false;
-    end
+function [x, residuals, iter] = minres_qr(A, b, precon, n_edges, precon_threshold, reorthogonalize, verbose)
+% Computes the full MINRES-QR algorithm, starting from sparse matrix A and
+%   vector b.
+% Both the problem matrix A and the b are truncated by one column and one
+%   row and by one row respectively. This is done in order to retroactively
+%   make E have full rank, given that the rank of an incidence matrix of a
+%   graph with a single connected component is #nodes - 1. This makes the
+%   matrix S = - E' D^{-1} E negative definite. In order to obtain the
+%   solution to the original problem, a 0 is appended to the final solution
+%   vector obtained, restoring the lost dimension.
+% At each iteration, the solution to the system is searched in an
+%   increasingly growing Lanczos subspace, whose bases are iteratively
+%   obtained by the Lanczos algorithm. The tridiagonal matrix T obtained
+%   at iteration k is then decomposed using an iterative version of QR
+%   factorization, which updates the matrices Q and R at each step,
+%   instead of recomputing them from scratch. The final solution for each 
+%   iteration is finally obtained by solving the system R_k x_k = c, where
+%   c is a vector obtained from of \beta_k Q_k.
+% The algorithm stops once the relative residual reaches the desired
+%   precision (1e-09).
+% Additional parameters are available to precondition and
+%   reorthogonalize the problem at hand.
+% In case of (Schur Complement) preconditioning, the preconditioner factors D_s and C are
+%   obtained from A; they are then applied to b, in order to obtain its
+%   preconditioned version. At each iteration, they are passed to the
+%   Lanczos function, which accordingly preconditions the matrix A when it
+%   is applied to v_k.
+%
+% Inputs:
+%
+% - A ([nodes+edges x nodes+edges] real sparse matrix): the main problem matrix, 
+%       it is composed by [D E'; E 0], where D is a diagonal
+%       positive definite matrix, while E is the incidence matrix of the graph.
+%
+% - b ([nodes+edges x 1] real column vector)
+%
+% Optional inputs:
+%
+% - precon (bool): if true, the system is preconditioned using Schur
+%       Complement preconditioner.
+%
+% - n_edges (int, scalar): the number of edges, needed to extract the D
+%       matrix from A during the creation of the preconditioner.
+%
+% - precon_threshold (real, scalar, defaults to -1): specifies the desired 
+%       non-negative threshold for non-diagonal elements in the S block.
+%       It can be defined in the two following ways:
+%       - threshold > 0: the desired threshold value;
+%       - threshold = 0: the threshold value is set to be the mean of the
+%           non-diagonal values of S.
+%
+% - reorthogonalize (bool, defaults to false): whether to reorthogonalize
+%       the system or not during Lanczos step. This noticebly increases its cost,
+%       while making the algorithm backward stable.
+%
+% - verbose (bool, defaults to false): whether to print information about
+%       the algorithm or not.
+%
+% Outputs:
+%
+% - x ([nodes+edges x 1] real vector): the computed solution of the system Ax = b.
+%
+% - residuals ([iter x 1] real vector): the relative residuals of all the
+%       iterations.
+%
+% - iter (int, scalar): the number of iterations needed for the algorithm
+%       to converge.
+%
+
+    % handle optional variables
     if exist('precon', 'var') == 0
        precon = false;
     end
+    if precon && exist('n_edges', 'var') == 0
+        error("ERROR: must specify the number of edges in the graph/the dimension of the D matrix in order to apply the Schur Preconditioner");
+    end
     if exist('precon_threshold', 'var') == 0
-        precon_sparse = false;
-        precon_threshold = 0;
-    else
-        precon_sparse = true;
+        precon_threshold = -1;
     end
-    if exist('precon_perc_threshold', 'var') == 0
-       precon_perc_threshold = 0;
+    if exist('reorthogonalize', 'var') == 0
+       reorthogonalize = false;
     end
-    % check whether A is symmetric
-%     if ~is_symm(A)
-%         error('A must be symmetric')
-%         return
-%     end
+    if exist('verbose', 'var') == 0
+       verbose = false;
+    end
+    
+    % remove one node from the problem, so that E has full rank
+    A = A(1:end-1, 1:end-1);
+    b = b(1:end-1);
+    
     % saving the original b, before eventual preconditioning
     b_start = b;
-    % preconditioning 
+    
+    % initializing preconditioning matrices to default values
     D_s = 0;
     C = 0;
     if precon == true
-        fprintf("Initializing preconditioner\n");
-        [D_s, C] = apply_preconditioner(A, size_D, precon_sparse, precon_threshold, precon_perc_threshold);
+        if verbose; fprintf("\tInitializing preconditioner\n"); end
+        [D_s, C] = create_preconditioner(A, n_edges, precon_threshold, false, verbose);
         b = multiply_preconditioner(b, D_s, C, true);
-        residuals_precon = nan(1, size(A, 1));
     end
     
-    if reorthogonalize == true
-        fprintf("\tApplying reorthogonalization");
+    if reorthogonalize && verbose
+        fprintf("\tApplying reorthogonalization during Lanczos\n");
     end
     
     % initialized general vars
@@ -42,58 +110,57 @@ function [x, residuals, iter, residuals_precon] = minres_qr(A, b, precon, size_D
     residuals = nan(1, size_A);
     
     % initialize Lanczos' matrices
-    %   preinitializing them with the correct dimensions make them too big
+    %   preinitializing them with the full dimensions makes them too big
     %   for problems with notable sizes (changes in times are minimal)
-%     V = zeros(size_A, size_A+1);
-%     T = zeros(size_A+1, size_A);
     V = zeros(size_A, 2);
     T = zeros(2, 1);
     prev_w = b;
     beta_1 = norm(b);
     
-    % initialize QR matrices
+    % initialize QR and final solution matrices
     Q = eye(1);
     R = eye(1);
     c = zeros(1, 1);
     
-    fprintf("Starting iterations\n");
+    if verbose; fprintf("Starting iterations\n"); end
     
     % iterate up to size of A at max
     for k = 1:size_A
+        if verbose; fprintf("Iteration %i\n", k); end
+        
         % LANCZOS
         [V, T, prev_w] = iterative_lanczos(A, V, T, prev_w, k, reorthogonalize, precon, D_s, C);
+        
         % QR
         [Q, R] = iterative_QR(T(1:k+1, 1:k), Q, R, k);
+        
         % BACKSUBSTITUTION
         %  use the reduced version of the QR, using just Q_1 and R_1
         %      from Q = [Q_1 Q_2] and R = [R_1; 0]
         c(k, 1) = beta_1 * Q(1, k);
-        y_k = R(1:end-1, :) \ c; % O(n)
+        y_k = R(1:end-1, :) \ c;
+        
         % SOLUTION
         x_k = V(:, 1:k) * y_k;
         if precon == true
             % solution of the original truncated system
             x_k = multiply_preconditioner(x_k, D_s, C); % x = B^-1 * \hat(x)
-            y_p = A * x_k; % y_p = A * B^-1 * \hat(x)
-            % A*x of the preconditioned system
-            y_p = multiply_preconditioner(y_p, D_s, C, true); % y_p = B^-T * A * B^-1 * \hat(x)
-            residuals_precon(k) = norm(b - y_p);
         end
-        % A*x of the original system
-        y = A * x_k;
-        residual = norm(b_start - y) / norm(b_start);
+        
+        % save the current relative residual
+        residual = norm(b_start - A * x_k) / norm(b_start);
         residuals(k) = residual;
+        
         % check whether the residual is small enough
-        if precon == false && residual <= threshold
-            break
-        elseif precon == true && residuals_precon(k) <= threshold
-            residuals_precon = residuals_precon(1:k);
+        if residual <= threshold
             break
         end
     end
     
+    % restore the removed row from the solution
     x = x_k;
+    x(end+1) = 0;
     residuals = residuals(1:k);
-    fprintf("Completed in %g iterations\n", k)
+    if verbose; fprintf("MINRES-QR converged in %i iterations\n", k); end
     iter = k;
 end
