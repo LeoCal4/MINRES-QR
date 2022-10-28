@@ -14,7 +14,7 @@ for n_nodes_index = 1:size(n_nodes_values, 2)
         for seed_index = 1:size(seed_values, 2)
             seed = seed_values(seed_index);
             fprintf("\t\tSeed: %.0f\n", seed);
-            [A_t, b_t] = generate_problem_matrices(n_nodes, n_edges, seed, "skip", true);
+            [A, b] = generate_problem_matrices(n_nodes, n_edges, seed, "skip", true);
         end
     end
 end

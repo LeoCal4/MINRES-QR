@@ -75,6 +75,7 @@ function [D_s, C, P] = create_preconditioner(A, n_edges, threshold, build_full_p
         end
 
         if threshold == 0
+            if verbose; fprintf("Using mean of non-diag elements as threshold\n"); end
             % use the mean of non-diagonal (hence positive) values
             threshold = mean(S(S>0&non_diag_mask));
         end

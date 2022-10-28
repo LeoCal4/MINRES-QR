@@ -1,13 +1,6 @@
-function [x, residuals, iter] = minres_qr(A, b, precon, n_edges, precon_threshold, reorthogonalize, verbose)
-% Computes the full MINRES-QR algorithm, starting from sparse matrix A and
-%   vector b.
-% Both the problem matrix A and the b are truncated by one column and one
-%   row and by one row respectively. This is done in order to retroactively
-%   make E have full rank, given that the rank of an incidence matrix of a
-%   graph with a single connected component is #nodes - 1. This makes the
-%   matrix S = - E' D^{-1} E negative definite. In order to obtain the
-%   solution to the original problem, a 0 is appended to the final solution
-%   vector obtained, restoring the lost dimension.
+function [x, residuals, iter] = minres_qr(A_t, b_t, precon, n_edges, precon_threshold, reorthogonalize, verbose)
+% Computes the full MINRES-QR algorithm, starting from sparse matrix A_t and
+%   vector b_t.
 % At each iteration, the solution to the system is searched in an
 %   increasingly growing Lanczos subspace, whose bases are iteratively
 %   obtained by the Lanczos algorithm. The tridiagonal matrix T obtained
@@ -21,18 +14,20 @@ function [x, residuals, iter] = minres_qr(A, b, precon, n_edges, precon_threshol
 % Additional parameters are available to precondition and
 %   reorthogonalize the problem at hand.
 % In case of (Schur Complement) preconditioning, the preconditioner factors D_s and C are
-%   obtained from A; they are then applied to b, in order to obtain its
+%   obtained from A_t; they are then applied to b_t, in order to obtain its
 %   preconditioned version. At each iteration, they are passed to the
-%   Lanczos function, which accordingly preconditions the matrix A when it
+%   Lanczos function, which accordingly preconditions the matrix A_t when it
 %   is applied to v_k.
 %
 % Inputs:
 %
-% - A ([nodes+edges x nodes+edges] real sparse matrix): the main problem matrix, 
-%       it is composed by [D E'; E 0], where D is a diagonal
-%       positive definite matrix, while E is the incidence matrix of the graph.
+% - A_t ([(nodes-1)+edges x (nodes-1)+edges] real sparse matrix): the truncated
+%       version of the problem matrix. It is composed by [D F'; F 0], where D is a diagonal
+%       positive definite matrix, while F is the incidence matrix of the graph 
+%       with one row removed.
 %
-% - b ([nodes+edges x 1] real column vector)
+% - b_t ([(nodes-1)+edges x 1] real column vector): the truncated version of
+%       the original b vector
 %
 % Optional inputs:
 %
@@ -40,7 +35,7 @@ function [x, residuals, iter] = minres_qr(A, b, precon, n_edges, precon_threshol
 %       Complement preconditioner.
 %
 % - n_edges (int, scalar): the number of edges, needed to extract the D
-%       matrix from A during the creation of the preconditioner.
+%       matrix from A_t during the creation of the preconditioner.
 %
 % - precon_threshold (real, scalar, defaults to -1): specifies the desired 
 %       non-negative threshold for non-diagonal elements in the S block.
@@ -58,7 +53,9 @@ function [x, residuals, iter] = minres_qr(A, b, precon, n_edges, precon_threshol
 %
 % Outputs:
 %
-% - x ([nodes+edges x 1] real vector): the computed solution of the system Ax = b.
+% - x ([(nodes-1)+edges x 1] real vector): the computed solution of the system A_t x_t = b_t.
+%       In order to obtain the solution to the real system Ax = b, simply
+%       append a 0 at the end of the vector.
 %
 % - residuals ([iter x 1] real vector): the relative residuals of all the
 %       iterations.
@@ -84,20 +81,16 @@ function [x, residuals, iter] = minres_qr(A, b, precon, n_edges, precon_threshol
        verbose = false;
     end
     
-    % remove one node from the problem, so that E has full rank
-    A = A(1:end-1, 1:end-1);
-    b = b(1:end-1);
-    
-    % saving the original b, before eventual preconditioning
-    b_start = b;
+    % saving the original b_t, before eventual preconditioning
+    b_start = b_t;
     
     % initializing preconditioning matrices to default values
     D_s = 0;
     C = 0;
     if precon == true
         if verbose; fprintf("\tInitializing preconditioner\n"); end
-        [D_s, C] = create_preconditioner(A, n_edges, precon_threshold, false, verbose);
-        b = multiply_preconditioner(b, D_s, C, true);
+        [D_s, C] = create_preconditioner(A_t, n_edges, precon_threshold, false, verbose);
+        b_t = multiply_preconditioner(b_t, D_s, C, true);
     end
     
     if reorthogonalize && verbose
@@ -105,7 +98,7 @@ function [x, residuals, iter] = minres_qr(A, b, precon, n_edges, precon_threshol
     end
     
     % initialized general vars
-    size_A = size(A, 1);
+    size_A = size(A_t, 1);
     threshold = 1e-9;
     residuals = nan(1, size_A);
     
@@ -114,8 +107,8 @@ function [x, residuals, iter] = minres_qr(A, b, precon, n_edges, precon_threshol
     %   for problems with notable sizes (changes in times are minimal)
     V = zeros(size_A, 2);
     T = zeros(2, 1);
-    prev_w = b;
-    beta_1 = norm(b);
+    prev_w = b_t;
+    beta_1 = norm(b_t);
     
     % initialize QR and final solution matrices
     Q = eye(1);
@@ -124,12 +117,12 @@ function [x, residuals, iter] = minres_qr(A, b, precon, n_edges, precon_threshol
     
     if verbose; fprintf("Starting iterations\n"); end
     
-    % iterate up to size of A at max
+    % iterate up to size of A_t at max
     for k = 1:size_A
         if verbose; fprintf("Iteration %i\n", k); end
         
         % LANCZOS
-        [V, T, prev_w] = iterative_lanczos(A, V, T, prev_w, k, reorthogonalize, precon, D_s, C);
+        [V, T, prev_w] = iterative_lanczos(A_t, V, T, prev_w, k, reorthogonalize, precon, D_s, C);
         
         % QR
         [Q, R] = iterative_QR(T(1:k+1, 1:k), Q, R, k);
@@ -148,7 +141,7 @@ function [x, residuals, iter] = minres_qr(A, b, precon, n_edges, precon_threshol
         end
         
         % save the current relative residual
-        residual = norm(b_start - A * x_k) / norm(b_start);
+        residual = norm(b_start - A_t * x_k) / norm(b_start);
         residuals(k) = residual;
         
         % check whether the residual is small enough
@@ -157,9 +150,7 @@ function [x, residuals, iter] = minres_qr(A, b, precon, n_edges, precon_threshol
         end
     end
     
-    % restore the removed row from the solution
     x = x_k;
-    x(end+1) = 0;
     residuals = residuals(1:k);
     if verbose; fprintf("MINRES-QR converged in %i iterations\n", k); end
     iter = k;
